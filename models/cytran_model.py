@@ -2,11 +2,16 @@
 
 import torch
 import itertools
-from util import ImagePool
 from models.conv_transformer import ConvTransformer
 from .base_model import BaseModel
 from . import networks
 
+
+import sys
+import os
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(THIS_DIR))
+from util.image_pool import ImagePool
 
 class CyTranModel(BaseModel):
     @staticmethod

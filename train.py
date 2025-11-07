@@ -5,7 +5,7 @@ from options.train_options import TrainOptions
 from data import create_dataset
 from models import create_model
 from util.visualizer import Visualizer
-
+from models.cytran_model import CyTranModel
 
 if __name__ == '__main__':
     opt = TrainOptions().parse()   # get training options
@@ -13,7 +13,12 @@ if __name__ == '__main__':
     dataset_size = len(dataset)    # get the number of images in the dataset.
     print('The number of training images = %d' % dataset_size)
 
-    model = create_model(opt)      # create a model given opt.model and other options
+    # model = create_model(opt)      # create a model given opt.model and other options
+    
+    # NOTE: disable usage of create_model, directly imported CyTranModel
+    # for the sole purpose of reproducing CyTran paper
+
+    model = CyTranModel(opt)
     model.setup(opt)               # regular setup: load and print networks; create schedulers
     visualizer = Visualizer(opt)   # create a visualizer that display/save images and plots
     total_iters = 0                # the total number of training iterations
