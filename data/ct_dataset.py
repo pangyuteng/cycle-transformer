@@ -1,7 +1,7 @@
 # This code is released under the CC BY-SA 4.0 license.
 
 import pickle
-
+import json
 import numpy as np
 import pydicom
 
@@ -12,7 +12,9 @@ class CTDataset(BaseDataset):
     def __init__(self, opt):
         BaseDataset.__init__(self, opt)
 
-        self.raw_data = pickle.load(open(opt.dataroot, "rb"))
+        #self.raw_data = pickle.load(open(opt.dataroot, "rb"))
+        with open(opt.dataroot,'r') as f:
+            self.raw_data = json.loads(f.read())
         self.labels = None
         self.Aclass = opt.Aclass
         self.Bclass = opt.Bclass

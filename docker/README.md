@@ -12,3 +12,10 @@ downloaded with gdown
 ### container related notes.
 
 docker run -it -u $(id -u):$(id -g) -v /cvibraid:/cvibraid -w $PWD pangyuteng/cycle-transformer bash
+
+docker run -it --shm-size=10g -v /cvibraid:/cvibraid -v /radraid:/radraid -w $PWD pangyuteng/cycle-transformer bash
+
+
+
+python train.py --dataroot /cvibraid/cvib2/apps/personal/pteng/github/cycle-transformer/docker/ct_data.json
+
