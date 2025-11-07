@@ -1,4 +1,6 @@
 checkpoints
+docker_stderror
+docker_stdout
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
