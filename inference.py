@@ -31,31 +31,41 @@ def main(nifti_file,device='cuda'): # device='cuda',cpu
 
     img_obj = sitk.ReadImage(nifti_file)
     orig_img = sitk.GetArrayFromImage(img_obj)
+    orig_img += 1024
     print(orig_img.shape)
 
     orig_img = orig_img[100,:,:].squeeze()
     print(orig_img.shape)
      
     # Scale original image, which is transform
+
     orig_img[orig_img < 0] = 0 
     orig_img = orig_img / 1e3
     orig_img = orig_img - 1
+    print(np.min(orig_img),np.max(orig_img))
 
     orig_img_in = np.expand_dims(orig_img, 0).astype(np.float)
     orig_img_in = torch.from_numpy(orig_img_in).float().to(device)
     orig_img_in = orig_img_in.unsqueeze(0)
+    print(orig_img_in.shape)
 
-    # ????
     native_fake = gen(orig_img_in)[0, 0].detach().cpu().numpy()
+    print(np.min(native_fake),np.max(native_fake))
     print(native_fake.shape)
+
+    # lungs W:1500 L:-600
+    # -600-750,-600+750
+    minval, maxval = ((-600-750+1024)/1000)-1,((-600+750+1024)/1000)-1
+    print(minval, maxval)
 
     plt.figure()
     plt.subplot(121)
-    plt.imshow(orig_img,cmap='gray')
+    plt.title("real (with contrast)")
+    plt.imshow(orig_img,cmap='gray',vmin=minval,vmax=maxval,interpolation='nearest')
     plt.subplot(122)
-    plt.imshow(native_fake,cmap='gray')
+    plt.title("fake")
+    plt.imshow(native_fake,cmap='gray',vmin=minval,vmax=maxval,interpolation='nearest')
     plt.savefig("ok.png")
-
 
 
 if __name__ == '__main__':
