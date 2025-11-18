@@ -30,11 +30,11 @@ def main(nifti_file,device='cuda'): # device='cuda',cpu
     gen.eval()
 
     img_obj = sitk.ReadImage(nifti_file)
-    orig_img = sitk.GetArrayFromImage(img_obj)
-    orig_img += 1024
-    print(orig_img.shape)
+    img_arr = sitk.GetArrayFromImage(img_obj)
+    print(img_arr.shape)
 
-    orig_img = orig_img[100,:,:].squeeze()
+    orig_img_orig = img_arr[100,:,:].squeeze()
+    orig_img = orig_img_orig + 1024
     print(orig_img.shape)
      
     # Scale original image, which is transform
@@ -55,13 +55,19 @@ def main(nifti_file,device='cuda'): # device='cuda',cpu
 
     # lungs W:1500 L:-600
     # -600-750,-600+750
-    minval, maxval = ((-600-750+1024)/1000)-1,((-600+750+1024)/1000)-1
+    # minval, maxval = ((-600-750+1024)/1000)-1,((-600+750+1024)/1000)-1
+    
+    # scale back to HU
+    minval, maxval = -600-750, -600+750
+    native_fake = (((native_fake+1)*1000)-1024).clip(-1024,1024)
+    
     print(minval, maxval)
+    print(np.min(orig_img),np.max(orig_img))
 
     plt.figure()
     plt.subplot(121)
     plt.title("real (with contrast)")
-    plt.imshow(orig_img,cmap='gray',vmin=minval,vmax=maxval,interpolation='nearest')
+    plt.imshow(orig_img_orig,cmap='gray',vmin=minval,vmax=maxval,interpolation='nearest')
     plt.subplot(122)
     plt.title("fake")
     plt.imshow(native_fake,cmap='gray',vmin=minval,vmax=maxval,interpolation='nearest')
