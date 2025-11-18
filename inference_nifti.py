@@ -13,7 +13,7 @@ import SimpleITK as sitk
 import matplotlib.pyplot as plt
 
 @torch.no_grad()
-def main(nifti_file,device='cuda'): # device='cuda',cpu
+def main(nifti_file,device='cuda',batch_size=25): # device='cuda',cpu
     tagA='ARTERIAL'
     tagB='NATIVE'
     # root_path - is the path to the raw Coltea-Lung-CT-100W data set.
@@ -32,52 +32,40 @@ def main(nifti_file,device='cuda'): # device='cuda',cpu
     img_obj = sitk.ReadImage(nifti_file)
     img_arr = sitk.GetArrayFromImage(img_obj)
     print(img_arr.shape)
-
-    orig_img_orig = img_arr[100,:,:].squeeze()
+    
+    orig_img_orig = img_arr.copy()
     orig_img = orig_img_orig + 1024
-    print(orig_img.shape)
-     
-    # Scale original image, which is transform
-
     orig_img[orig_img < 0] = 0 
     orig_img = orig_img / 1e3
     orig_img = orig_img - 1
+    orig_img = np.expand_dims(orig_img, 1).astype(np.float)
+    blank_arr = np.zeros_like(orig_img)
     print(np.min(orig_img),np.max(orig_img))
 
-    orig_img_in = np.expand_dims(orig_img, 0).astype(np.float)
-    orig_img_in = torch.from_numpy(orig_img_in).float().to(device)
-    orig_img_in = orig_img_in.unsqueeze(0)
-    print(orig_img_in.shape)
-
-    native_fake = gen(orig_img_in)[0, 0].detach().cpu().numpy()
-    print(np.min(native_fake),np.max(native_fake))
-    print(native_fake.shape)
-
-    # lungs W:1500 L:-600
-    # -600-750,-600+750
-    # minval, maxval = ((-600-750+1024)/1000)-1,((-600+750+1024)/1000)-1
     
+    myoutputlist = []
+    mydataset = torch.utils.data.TensorDataset(
+        torch.from_numpy(orig_img), torch.from_numpy(blank_arr)
+    )
+    mydataloader = torch.utils.data.DataLoader(
+        mydataset, batch_size=batch_size, shuffle=False
+    )
+    for step, (inputs, _) in enumerate(mydataloader):
+        gpu_tensor = inputs.float().to(device)
+        native_fake = gen(gpu_tensor).detach().cpu().numpy()
+        print(np.min(native_fake),np.max(native_fake))
+        print(native_fake.shape)
+        myoutputlist.append(native_fake)
+
+    output_arr = np.concatenate(myoutputlist,axis=0)
+    output_arr = output_arr.squeeze()
     # scale back to HU
     minval, maxval = -600-750, -600+750
-    native_fake = (((native_fake+1)*1000)-1024).clip(-1024,1024)
-    
-    print(minval, maxval)
-    print(np.min(orig_img),np.max(orig_img))
-
-    real_obj = sitk.GetImageFromArray(orig_img_orig.astype(np.int32))
-    sitk.WriteImage(real_obj,'real-post-contrast-slice-100.nii.gz')
-    fake_obj = sitk.GetImageFromArray(native_fake.astype(np.int32))
-    sitk.WriteImage(fake_obj,'fake-pre-contrast-slice-100.nii.gz')
-
-    plt.figure()
-    plt.subplot(121)
-    plt.title("real (with contrast)")
-    plt.imshow(orig_img_orig,cmap='gray',vmin=minval,vmax=maxval,interpolation='nearest')
-    plt.subplot(122)
-    plt.title("fake")
-    plt.imshow(native_fake,cmap='gray',vmin=minval,vmax=maxval,interpolation='nearest')
-    plt.savefig("ok.png")
-
+    output_arr = (((output_arr+1)*1000)-1024).clip(-1024,1024)
+    print(output_arr.shape)
+    out_obj = sitk.GetImageFromArray(output_arr.astype(np.int32))
+    out_obj.CopyInformation(img_obj)
+    sitk.WriteImage(out_obj,'fake.nii.gz')
 
 if __name__ == '__main__':
     #nifti_file = sys.argv[1]
