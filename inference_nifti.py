@@ -18,7 +18,8 @@ def main(device='cuda',batch_size=25): # device='cuda',cpu
     tagB='NATIVE'
     # root_path - is the path to the raw Coltea-Lung-CT-100W data set.
     opt = TrainOptions().parse()
-    nifti_file = opt.inputnifti
+    input_nifti_file = opt.inputnifti
+    output_nifti_file = opt.outputnifti
 
     opt.load_iter = 40
     opt.isTrain = False
@@ -29,7 +30,7 @@ def main(device='cuda',batch_size=25): # device='cuda',cpu
     gen = model.netG_A
     gen.eval()
 
-    img_obj = sitk.ReadImage(nifti_file)
+    img_obj = sitk.ReadImage(input_nifti_file)
     img_arr = sitk.GetArrayFromImage(img_obj)
     print(img_arr.shape)
     
@@ -65,7 +66,7 @@ def main(device='cuda',batch_size=25): # device='cuda',cpu
     print(output_arr.shape)
     out_obj = sitk.GetImageFromArray(output_arr.astype(np.int32))
     out_obj.CopyInformation(img_obj)
-    sitk.WriteImage(out_obj,'fake.nii.gz')
+    sitk.WriteImage(out_obj,output_nifti_file)
 
 if __name__ == '__main__':
     main()

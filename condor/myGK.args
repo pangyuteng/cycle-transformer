@@ -1,3 +1,0 @@
-python train.py --dataroot /radraid/pteng-public/Coltea-Lung-CT-100W/ct_data_train.json --Aclass ARTERIAL --Bclass NATIVE --checkpoints_dir /cvibraid/cvib2/apps/personal/gracekim/cycle-transformer/checkpoints/arterial-native
-python train.py --dataroot /radraid/pteng-public/Coltea-Lung-CT-100W/ct_data_train.json --Aclass VENOUS --Bclass NATIVE --checkpoints_dir /cvibraid/cvib2/apps/personal/gracekim/cycle-transformer/checkpoints/venous-native
-python train.py --dataroot /radraid/pteng-public/Coltea-Lung-CT-100W/ct_data_train.json --Aclass ARTERIAL --Bclass VENOUS --checkpoints_dir /cvibraid/cvib2/apps/personal/gracekim/cycle-transformer/checkpoints/arterial-venous
