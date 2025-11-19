@@ -5,3 +5,4 @@ pydicom==2.4.4
 visdom==0.2.4
 SimpleITK==2.0.0
 matplotlib==3.5.3
+scikit-image==0.19.3

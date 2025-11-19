@@ -13,12 +13,13 @@ import SimpleITK as sitk
 import matplotlib.pyplot as plt
 
 @torch.no_grad()
-def main(nifti_file,device='cuda'): # device='cuda',cpu
+def main(device='cuda'): # device='cuda',cpu
     tagA='ARTERIAL'
     tagB='NATIVE'
     # root_path - is the path to the raw Coltea-Lung-CT-100W data set.
 
     opt = TrainOptions().parse()
+    nifti_file = opt.inputnifti
 
     opt.load_iter = 40
     opt.isTrain = False
@@ -80,9 +81,7 @@ def main(nifti_file,device='cuda'): # device='cuda',cpu
 
 
 if __name__ == '__main__':
-    #nifti_file = sys.argv[1]
-    nifti_file = "/dingo_data/cvib-airflow/RESEARCH/10156/images/10156_ICI_002/1.3.12.2.1107.5.1.4.55174.30000022090111444695300000102/image.nii.gz"
-    main(nifti_file)#,output_file)
+    main()
 
 
 """
@@ -97,6 +96,7 @@ cp ../arterial-native/cytran/90_net_G_B.pth 40_net_G_B.pth
 
 python inference.py \
 --dataroot /radraid/pteng-public/Coltea-Lung-CT-100W \
---checkpoints_dir checkpoints
+--checkpoints_dir checkpoints \
+--inputnifti /dingo_data/cvib-airflow/RESEARCH/10156/images/10156_ICI_002/1.3.12.2.1107.5.1.4.55174.30000022090111444695300000102/image.nii.gz
 
 """
