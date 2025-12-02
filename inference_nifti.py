@@ -20,6 +20,8 @@ def main(device='cuda',batch_size=25): # device='cuda',cpu
     opt = TrainOptions().parse()
     input_nifti_file = opt.inputnifti
     output_nifti_file = opt.outputnifti
+    dirpath = os.path.dirname(output_nifti_file)
+    os.makedirs(dirpath,exist_ok=True)
 
     opt.load_iter = 40
     opt.isTrain = False
@@ -86,5 +88,6 @@ python inference_nifti.py \
 --dataroot /radraid/pteng-public/Coltea-Lung-CT-100W \
 --checkpoints_dir checkpoints \
 --inputnifti /dingo_data/cvib-airflow/RESEARCH/10156/images/10156_ICI_002/1.3.12.2.1107.5.1.4.55174.30000022090111444695300000102/image.nii.gz
+--outputnifti fake.nii.gz
 
 """
