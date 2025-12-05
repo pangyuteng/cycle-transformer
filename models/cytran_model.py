@@ -89,7 +89,18 @@ class CyTranModel(BaseModel):
             self.optimizers.append(self.optimizer_G)
             self.optimizers.append(self.optimizer_D)
 
-    def set_input(self, input):
+    def set_custom_input(self, input):
+        """Unpack input data from the dataloader and perform necessary pre-processing steps.
+        Parameters:
+            input (dict): include the data itself and its metadata information.
+        The option 'direction' can be used to swap domain A and domain B.
+        """
+        AtoB = self.opt.direction == 'AtoB'
+        a,b,c = input
+        self.real_A,self.real_B,self.real_A_aorta_mask = \
+            a.to(self.device).float(),b.to(self.device).float(),c.to(self.device).float()
+
+    def set_input(self, input, is_compute_aorta_hu_loss=False):
         """Unpack input data from the dataloader and perform necessary pre-processing steps.
         Parameters:
             input (dict): include the data itself and its metadata information.
@@ -98,6 +109,8 @@ class CyTranModel(BaseModel):
         AtoB = self.opt.direction == 'AtoB'
         self.real_A = input['A' if AtoB else 'B'].to(self.device).float()
         self.real_B = input['B' if AtoB else 'A'].to(self.device).float()
+        if is_compute_aorta_hu_loss:
+            self.real_A_aorta_mask = input['A_aorta_mask']
 
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
@@ -136,7 +149,7 @@ class CyTranModel(BaseModel):
         fake_A = self.fake_A_pool.query(self.fake_A)
         self.loss_D_B = self.backward_D_basic(self.netD_B, self.real_A, fake_A)
 
-    def backward_G(self):
+    def backward_G(self,is_compute_aorta_hu_loss=False):
         """Calculate the loss for generators G_A and G_B"""
         lambda_idt = self.opt.lambda_identity
         lambda_A = self.opt.lambda_A
@@ -153,6 +166,32 @@ class CyTranModel(BaseModel):
             self.loss_idt_A = 0
             self.loss_idt_B = 0
 
+        if is_compute_aorta_hu_loss:
+            my_loss = torch.nn.L1Loss(reduction='mean')
+            meanhu = 50
+            no_contrast_value =  ( (meanhu + 1024) / 1e3 ) -1
+            constant_mask = torch.normal(no_contrast_value, 0.01, size=self.real_A_aorta_mask.shape).float().to('cuda')
+
+            if True:
+                ideal_aorta = torch.mean(constant_mask[self.real_A_aorta_mask.to(torch.bool)])
+                fake_aorta = torch.mean(self.fake_B[self.real_A_aorta_mask.to(torch.bool)])
+                self.loss_aorta_mean_hu_G_A = my_loss(ideal_aorta,fake_aorta)
+            if False:
+                ideal_aorta = constant_mask*self.real_A_aorta_mask
+                fake_aorta = self.fake_B*self.real_A_aorta_mask
+                self.loss_aorta_mean_hu_G_A = my_loss(ideal_aorta,fake_aorta)
+            if False:
+                contrast_aorta = torch.mean(self.real_A[self.real_A_aorta_mask.to(torch.bool)])
+                ideal_aorta = torch.mean(constant_mask[self.real_A_aorta_mask.to(torch.bool)])
+                fake_aorta = torch.mean(self.fake_B[self.real_A_aorta_mask.to(torch.bool)])
+                self.loss_aorta_mean_hu_G_A = my_loss(ideal_aorta,fake_aorta)
+                #print('==== contrast_aorta',contrast_aorta,'ideal_aorta',ideal_aorta,'fake_aorta',fake_aorta)
+            if False:
+                ideal_aorta = constant_mask[self.real_A_aorta_mask.to(torch.bool)]
+                fake_aorta = self.fake_B[self.real_A_aorta_mask.to(torch.bool)]
+                self.loss_aorta_mean_hu_G_A = my_loss(ideal_aorta,fake_aorta)
+
+
         # GAN loss D_A(G_A(A))
         self.loss_G_A = self.criterionGAN(self.netD_A(self.fake_B), True)
         # GAN loss D_B(G_B(B))
@@ -163,9 +202,22 @@ class CyTranModel(BaseModel):
         self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
         # combined loss and calculate gradients
         self.loss_G = self.loss_G_A + self.loss_G_B + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_A + self.loss_idt_B
+        
+        if is_compute_aorta_hu_loss:
+            lambda_aorta = 1
+            #self.loss_G = self.loss_G_A + self.loss_cycle_A \
+            #    + lambda_aorta*self.loss_aorta_mean_hu_G_A
+
+            self.loss_G = self.loss_aorta_mean_hu_G_A
+
+            print(
+                'loss_G_A',self.loss_G_A,
+                'loss_cycle_A',self.loss_cycle_A,
+                'loss_aorta_mean_hu_G_A',self.loss_aorta_mean_hu_G_A
+            )
         self.loss_G.backward()
 
-    def optimize_parameters(self):
+    def optimize_parameters(self,is_compute_aorta_hu_loss=False):
         """Calculate losses, gradients, and update network weights; called in every training iteration"""
         # forward
         self.forward()      # compute fake images and reconstruction images.
@@ -183,7 +235,7 @@ class CyTranModel(BaseModel):
         # G_A and G_B
         self.set_requires_grad([self.netD_A, self.netD_B], False)  # Ds require no gradients when optimizing Gs
         self.optimizer_G.zero_grad()  # set G_A and G_B's gradients to zero
-        self.backward_G()  # calculate gradients for G_A and G_B
+        self.backward_G(is_compute_aorta_hu_loss=is_compute_aorta_hu_loss)  # calculate gradients for G_A and G_B
 
         # torch.nn.utils.clip_grad_norm_(self.netG_A.parameters(), self.clip_gen)
         # torch.nn.utils.clip_grad_norm_(self.netG_B.parameters(), self.clip_gen)

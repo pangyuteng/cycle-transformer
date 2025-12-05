@@ -2,6 +2,7 @@ checkpoints
 checkpoints-2025-11-07
 docker_stderror
 docker_stdout
+*.nii.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
