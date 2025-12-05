@@ -60,8 +60,8 @@ def main(device='cuda',batch_size=5): # device='cuda',cpu
     )
 
     model.loss_aorta_mean_hu_G_A = 100
-    while model.loss_aorta_mean_hu_G_A > 0.04:
-    #for x in range(1):
+    #while model.loss_aorta_mean_hu_G_A > 0.04:
+    for x in range(1):
         for i, data in enumerate(mydataloader):
             model.set_custom_input(data)
             model.optimize_parameters(is_compute_aorta_hu_loss=True)
