@@ -32,6 +32,9 @@ def main(device='cuda',batch_size=5): # device='cuda',cpu
 
     model = create_model(opt)
     model.setup(opt)
+    model.netG_B.eval()
+    model.netD_A.eval()
+    model.netD_B.eval()
     gen = model.netG_A
     gen.train()
 
@@ -48,7 +51,8 @@ def main(device='cuda',batch_size=5): # device='cuda',cpu
     orig_img = orig_img - 1
     orig_img = np.expand_dims(orig_img, 1).astype(np.float)
     aorta_arr = np.expand_dims(aorta_arr_org, 1).astype(np.float)
-    blank_arr = np.zeros_like(orig_img)
+    #blank_arr = np.zeros_like(orig_img)
+    blank_arr = orig_img.copy()
     print(np.min(orig_img),np.max(orig_img))
     
     # NOTE: maybe filter only aorta slices?
@@ -56,16 +60,21 @@ def main(device='cuda',batch_size=5): # device='cuda',cpu
         torch.from_numpy(orig_img), torch.from_numpy(blank_arr), torch.from_numpy(aorta_arr)
     )
     mydataloader = torch.utils.data.DataLoader(
-        mydataset, batch_size=batch_size, shuffle=False
+        mydataset, batch_size=5, shuffle=True
     )
-
-    model.loss_aorta_mean_hu_G_A = 100
-    #while model.loss_aorta_mean_hu_G_A > 0.04:
-    for x in range(1):
+    print("HERE!!!!!!!!!!!!!!!!!")
+    #for x in range(5):
+    myloss = 100
+    while myloss > 1:
+        print(myloss)
+        loss_list = []
         for i, data in enumerate(mydataloader):
             model.set_custom_input(data)
             model.optimize_parameters(is_compute_aorta_hu_loss=True)
-        print(model.loss_aorta_mean_hu_G_A)
+            loss_list.append(model.loss_aorta_mean_hu_G_A.cpu().detach().numpy())
+            print(loss_list)
+        myloss = np.mean(loss_list)
+        print(loss,model.loss_aorta_mean_hu_G_A,'!!!!!!!!!!!!!!!')
 
     gen.eval()
 
@@ -92,6 +101,7 @@ def main(device='cuda',batch_size=5): # device='cuda',cpu
     out_obj = sitk.GetImageFromArray(output_arr.astype(np.int32))
     print('real aorta mean hu',np.mean(img_arr[aorta_arr_org==1]))
     print('fake aorta mean hu',np.mean(output_arr[aorta_arr_org==1]))
+    #sys.exit(1)
     out_obj.CopyInformation(img_obj)
     sitk.WriteImage(out_obj,output_nifti_file)
 
@@ -118,5 +128,18 @@ CUDA_VISIBLE_DEVICES=7 python inference_nifti_oneshot.py \
 --inputaortanifti /dingo_data/cvib-airflow/RESEARCH/10156/totalsegmentator/results/10156_ICI_002/1.3.12.2.1107.5.1.4.55174.30000022090111444695300000102/aorta.nii.gz \
 --outputnifti ./fake-one-shot.nii.gz \
 --continue_train --lr 0.000001
+
+CUDA_VISIBLE_DEVICES=7 python inference_nifti_oneshot.py \
+--dataroot /radraid/pteng-public/Coltea-Lung-CT-100W \
+--checkpoints_dir checkpoints \
+--inputnifti /dingo_data/cvib-airflow/RESEARCH/10156/images/10156_ICI_002/1.3.12.2.1107.5.1.4.55174.30000022090111444695300000102/image.nii.gz \
+--inputaortanifti /dingo_data/cvib-airflow/RESEARCH/10156/totalsegmentator/results/10156_ICI_002/1.3.12.2.1107.5.1.4.55174.30000022090111444695300000102/aorta.nii.gz \
+--outputnifti ./fake-one-shot.nii.gz --continue_train --lr 0.00000001
+
+0.000001
+0.00000001
+
+reduced lr, added all loss terms, set B image to A, not blank, set shuffle to true.
+backprop with n=1, 5 iterations
 
 """

@@ -207,8 +207,10 @@ class CyTranModel(BaseModel):
             lambda_aorta = 1
             #self.loss_G = self.loss_G_A + self.loss_cycle_A \
             #    + lambda_aorta*self.loss_aorta_mean_hu_G_A
-
-            self.loss_G = self.loss_aorta_mean_hu_G_A
+            self.loss_G = \
+                self.loss_G_A + self.loss_G_B + self.loss_cycle_A + \
+                self.loss_cycle_B + self.loss_idt_A + self.loss_idt_B + \
+                self.loss_aorta_mean_hu_G_A
 
             print(
                 'loss_G_A',self.loss_G_A,
