@@ -62,7 +62,7 @@ def main(device='cuda',batch_size=5): # device='cuda',cpu
     mydataloader = torch.utils.data.DataLoader(
         mydataset, batch_size=5, shuffle=True
     )
-    print("HERE!!!!!!!!!!!!!!!!!")
+
     #for x in range(5):
     myloss = 100
     while myloss > 1:
