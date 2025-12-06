@@ -74,7 +74,7 @@ def main(device='cuda',batch_size=5): # device='cuda',cpu
             loss_list.append(model.loss_aorta_mean_hu_G_A.cpu().detach().numpy())
             print(loss_list)
         myloss = np.mean(loss_list)
-        print(loss,model.loss_aorta_mean_hu_G_A,'!!!!!!!!!!!!!!!')
+        print(myloss,model.loss_aorta_mean_hu_G_A,'!!!!!!!!!!!!!!!')
 
     gen.eval()
 
