@@ -63,9 +63,9 @@ def main(device='cuda',batch_size=5): # device='cuda',cpu
         mydataset, batch_size=5, shuffle=True
     )
 
-    #for x in range(5):
     myloss = 100
-    while myloss > 1:
+    counter = 0
+    while myloss > 0.01 and counter < 10:
         print(myloss)
         loss_list = []
         for i, data in enumerate(mydataloader):
@@ -74,6 +74,7 @@ def main(device='cuda',batch_size=5): # device='cuda',cpu
             loss_list.append(model.loss_aorta_mean_hu_G_A.cpu().detach().numpy())
             print(loss_list)
         myloss = np.mean(loss_list)
+        counter+=1
         print(myloss,model.loss_aorta_mean_hu_G_A,'!!!!!!!!!!!!!!!')
 
     gen.eval()
