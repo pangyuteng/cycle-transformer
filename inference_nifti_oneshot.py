@@ -53,7 +53,7 @@ def main(device='cuda',batch_size=5): # device='cuda',cpu
     aorta_arr = np.expand_dims(aorta_arr_org, 1).astype(np.float)
     #blank_arr = np.zeros_like(orig_img)
     blank_arr = orig_img.copy()
-    print(np.min(orig_img),np.max(orig_img))
+    #print(np.min(orig_img),np.max(orig_img))
     
     # NOTE: maybe filter only aorta slices?
     mydataset = torch.utils.data.TensorDataset(
@@ -65,18 +65,16 @@ def main(device='cuda',batch_size=5): # device='cuda',cpu
 
     myloss = 100
     counter = 0
-    while myloss > 0.01 and counter < 10:
-        print(myloss)
+    while myloss > 0.1 and counter < 5:
         loss_list = []
         for i, data in enumerate(mydataloader):
             model.set_custom_input(data)
             model.optimize_parameters(is_compute_aorta_hu_loss=True)
             loss_list.append(model.loss_aorta_mean_hu_G_A.cpu().detach().numpy())
-            print(loss_list)
-        myloss = np.mean(loss_list)
+        myloss = np.nanmean(loss_list)
         counter+=1
-        print(myloss,model.loss_aorta_mean_hu_G_A,'!!!!!!!!!!!!!!!')
-
+        print(f'myloss {myloss} counter {counter} fake_aorta_mean_hu: {model.fake_aorta_mean_hu}')
+    
     gen.eval()
 
     myoutputlist = []
@@ -89,8 +87,6 @@ def main(device='cuda',batch_size=5): # device='cuda',cpu
     for step, (inputs, _) in enumerate(mydataloader):
         gpu_tensor = inputs.float().to(device)
         native_fake = gen(gpu_tensor).detach().cpu().numpy()
-        #print(np.min(native_fake),np.max(native_fake))
-        #print(native_fake.shape)
         myoutputlist.append(native_fake)
 
     output_arr = np.concatenate(myoutputlist,axis=0)
@@ -102,7 +98,7 @@ def main(device='cuda',batch_size=5): # device='cuda',cpu
     out_obj = sitk.GetImageFromArray(output_arr.astype(np.int32))
     print('real aorta mean hu',np.mean(img_arr[aorta_arr_org==1]))
     print('fake aorta mean hu',np.mean(output_arr[aorta_arr_org==1]))
-    #sys.exit(1)
+
     out_obj.CopyInformation(img_obj)
     sitk.WriteImage(out_obj,output_nifti_file)
 

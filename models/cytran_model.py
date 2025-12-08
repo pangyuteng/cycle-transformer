@@ -172,25 +172,13 @@ class CyTranModel(BaseModel):
             no_contrast_value =  ( (meanhu + 1024) / 1e3 ) -1
             constant_mask = torch.normal(no_contrast_value, 0.01, size=self.real_A_aorta_mask.shape).float().to('cuda')
 
-            if True:
-                ideal_aorta = torch.mean(constant_mask[self.real_A_aorta_mask.to(torch.bool)])
-                fake_aorta = torch.mean(self.fake_B[self.real_A_aorta_mask.to(torch.bool)])
-                self.loss_aorta_mean_hu_G_A = my_loss(ideal_aorta,fake_aorta)
-            if False:
-                ideal_aorta = constant_mask*self.real_A_aorta_mask
-                fake_aorta = self.fake_B*self.real_A_aorta_mask
-                self.loss_aorta_mean_hu_G_A = my_loss(ideal_aorta,fake_aorta)
-            if False:
-                contrast_aorta = torch.mean(self.real_A[self.real_A_aorta_mask.to(torch.bool)])
-                ideal_aorta = torch.mean(constant_mask[self.real_A_aorta_mask.to(torch.bool)])
-                fake_aorta = torch.mean(self.fake_B[self.real_A_aorta_mask.to(torch.bool)])
-                self.loss_aorta_mean_hu_G_A = my_loss(ideal_aorta,fake_aorta)
-                #print('==== contrast_aorta',contrast_aorta,'ideal_aorta',ideal_aorta,'fake_aorta',fake_aorta)
-            if False:
-                ideal_aorta = constant_mask[self.real_A_aorta_mask.to(torch.bool)]
-                fake_aorta = self.fake_B[self.real_A_aorta_mask.to(torch.bool)]
-                self.loss_aorta_mean_hu_G_A = my_loss(ideal_aorta,fake_aorta)
+            ideal_aorta = torch.mean(constant_mask[self.real_A_aorta_mask.to(torch.bool)])
+            fake_aorta = torch.mean(self.fake_B[self.real_A_aorta_mask.to(torch.bool)])
+            self.loss_aorta_mean_hu_G_A = my_loss(ideal_aorta,fake_aorta)
 
+            self.fake_aorta_mean_hu = ((fake_aorta+1)*1000)-1024
+            if False:
+                print(f'{self.loss_aorta_mean_hu_G_A} fake_aorta mean {self.fake_aorta_mean_hu} HU')
 
         # GAN loss D_A(G_A(A))
         self.loss_G_A = self.criterionGAN(self.netD_A(self.fake_B), True)
@@ -205,18 +193,17 @@ class CyTranModel(BaseModel):
         
         if is_compute_aorta_hu_loss:
             lambda_aorta = 1
-            #self.loss_G = self.loss_G_A + self.loss_cycle_A \
-            #    + lambda_aorta*self.loss_aorta_mean_hu_G_A
             self.loss_G = \
                 self.loss_G_A + self.loss_G_B + self.loss_cycle_A + \
                 self.loss_cycle_B + self.loss_idt_A + self.loss_idt_B + \
-                self.loss_aorta_mean_hu_G_A
+                lambda_aorta*self.loss_aorta_mean_hu_G_A
 
-            print(
-                'loss_G_A',self.loss_G_A,
-                'loss_cycle_A',self.loss_cycle_A,
-                'loss_aorta_mean_hu_G_A',self.loss_aorta_mean_hu_G_A
-            )
+            if False:
+                print(
+                    'loss_G_A',self.loss_G_A,
+                    'loss_cycle_A',self.loss_cycle_A,
+                    'loss_aorta_mean_hu_G_A',self.loss_aorta_mean_hu_G_A
+                )
         self.loss_G.backward()
 
     def optimize_parameters(self,is_compute_aorta_hu_loss=False):
