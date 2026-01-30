@@ -18,8 +18,20 @@ def main(device='cuda'): # device='cuda',cpu
     # root_path - is the path to the raw Coltea-Lung-CT-100W data set.
 
     opt = TrainOptions().parse()
-    inputdicom = opt.inputdicom # dicom image
-    outputdicom = opt.outputdicom # dicom image
+    inputdicom = opt.inputdicom # dicom image folder
+    outputdicom = opt.outputdicom # dicom image folder
+
+    # either accepts .seri file or .dicom file
+    if inputdicom.endswith(".seri"):
+        assert(outputdicom.endswith(".seri"))
+        with open(inputdicom,'r') as f:
+            inputdicom_list = [x for x in f.read().split("\n") if len(x) > 0]
+        with open(outputdicom,'r') as f:
+            outputdicom_list = [x for x in f.read().split("\n") if len(x) > 0]
+        print(len(inputdicom_list),len(outputdicom_list))
+    else:
+        inputdicom_list = [inputdicom]
+        outputdicom_list = [outputdicom]
 
     opt.load_iter = 40
     opt.isTrain = False
@@ -29,32 +41,36 @@ def main(device='cuda'): # device='cuda',cpu
     model.setup(opt)
     gen = model.netG_A
     gen.eval()
-
-    orig_img = pydicom.dcmread(inputdicom).pixel_array
-    org_dtype = orig_img.dtype
-
-    orig_img[orig_img < 0] = 0
-    orig_img = orig_img / 1e3
-    orig_img = orig_img - 1
-
-    orig_img_in = np.expand_dims(orig_img, 0).astype(np.float)
-    orig_img_in = torch.from_numpy(orig_img_in).float().to(device)
-    print(orig_img_in.shape)
-    orig_img_in = orig_img_in.unsqueeze(0)
-    print(orig_img_in.shape)
-
-    native_fake = gen(orig_img_in)[0, 0].detach().cpu().numpy()
-    print(np.min(native_fake),np.max(native_fake))
-    print(native_fake.shape)
-    print(np.min(native_fake),np.max(native_fake))
-    native_fake = ((native_fake+1)*1000).clip(0,2048)
-    print(np.min(native_fake),np.max(native_fake))
     
-    print(native_fake.dtype)
-    target_arr = native_fake.astype(np.uint16)
-    ds = pydicom.dcmread(inputdicom)
-    ds.PixelData = target_arr.tobytes()
-    ds.save_as(outputdicom)
+    for inputdicom_file,outputdicom_file in zip(inputdicom_list,outputdicom_list):
+        orig_img = pydicom.dcmread(inputdicom_file).pixel_array
+        org_dtype = orig_img.dtype
+
+        orig_img[orig_img < 0] = 0
+        orig_img = orig_img / 1e3
+        orig_img = orig_img - 1
+
+        orig_img_in = np.expand_dims(orig_img, 0).astype(np.float)
+        orig_img_in = torch.from_numpy(orig_img_in).float().to(device)
+        print(orig_img_in.shape)
+        orig_img_in = orig_img_in.unsqueeze(0)
+        print(orig_img_in.shape)
+
+        native_fake = gen(orig_img_in)[0, 0].detach().cpu().numpy()
+        print(np.min(native_fake),np.max(native_fake))
+        print(native_fake.shape)
+        print(np.min(native_fake),np.max(native_fake))
+        native_fake = ((native_fake+1)*1000).clip(0,2048)
+        print(np.min(native_fake),np.max(native_fake))
+        
+        print(native_fake.dtype)
+        target_arr = native_fake.astype(np.uint16)
+
+        ds = pydicom.dcmread(inputdicom_file)
+        ds.PixelData = target_arr.tobytes()
+        outdir = os.path.dirname(outputdicom_file)
+        os.makedirs(outdir,exist_ok=True)
+        ds.save_as(outputdicom_file)
 
 if __name__ == '__main__':
     main()
